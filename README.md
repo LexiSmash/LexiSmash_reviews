@@ -1,10 +1,17 @@
+<div align="center">
+
 # ⭐ LexiSmash Reviews — public fingerprint chain 🔗
 
-[![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://github.com/LexiSmash/LexiSmash_reviews) [![License](https://img.shields.io/badge/license-CC0%201.0-blue.svg?style=plastic)](LICENSE)
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/b0be1ee420504e879486a720e8f6cdd0)](https://app.codacy.com/gh/LexiSmash/LexiSmash_reviews/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
+[![pages-build-deployment](https://github.com/LexiSmash/LexiSmash_reviews/actions/workflows/pages/pages-build-deployment/badge.svg)](https://github.com/LexiSmash/LexiSmash_reviews/actions/workflows/pages/pages-build-deployment)
+[![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://github.com/LexiSmash/LexiSmash_reviews) 
+[![License](https://img.shields.io/badge/license-CC0%201.0-blue.svg?style=plastic)](LICENSE)
 
 The tamper-evident log behind the public player reviews of [**LexiSmash**](https://lexismash.it), a multiplayer word party game. Every review left on the site gets a cryptographic **fingerprint**, and every fingerprint is chained to the previous one. This repository keeps a public copy of that chain, so **anyone can check that no review has been edited after it was written — not even by the site owner**. 🛡️
 
 ## [👉 Click here to open the Verifier! 👈](https://lexismash.github.io/LexiSmash_reviews/)
+
+</div>
 
 ---
 
