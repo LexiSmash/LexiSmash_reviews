@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LexiSmash Reviews — Verifier</title>
+<meta name="description" content="Check that no LexiSmash review has been edited: re-computes the public fingerprint chain in your browser.">
+<style>
+  :root { color-scheme: light dark; --ok: #16a34a; --bad: #dc2626; --muted: #6b7280; }
+  body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; max-width: 860px; margin: 0 auto; padding: 1.5rem; line-height: 1.5; }
+  h1 { margin-bottom: 0.2rem; }
+  .muted { color: var(--muted); }
+  .box { border: 1px solid rgba(128,128,128,.35); border-radius: 10px; padding: 1rem 1.2rem; margin: 1rem 0; }
+  .ok { color: var(--ok); font-weight: 700; }
+  .bad { color: var(--bad); font-weight: 700; }
+  table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+  th, td { text-align: left; padding: .35rem .4rem; border-bottom: 1px solid rgba(128,128,128,.25); vertical-align: top; }
+  code { font-size: .85em; word-break: break-all; }
+  label { display: block; margin-top: .6rem; font-weight: 600; }
+  input, select, textarea { width: 100%; box-sizing: border-box; padding: .45rem; font: inherit; }
+  button { margin-top: .8rem; padding: .5rem 1rem; font: inherit; cursor: pointer; }
+</style>
+</head>
+<body>
+<h1>⭐ LexiSmash Reviews — Verifier</h1>
+<p class="muted">This page downloads <code>reviews-chain.json</code> from this repository and re-computes every fingerprint with your browser's own crypto engine. Nothing is sent anywhere.</p>
+
+<div class="box" id="result">Checking…</div>
+
+<div class="box">
+  <h2 style="margin-top:0">Check a single review</h2>
+  <p class="muted">Copy the rating, the text and the language of a review you see on lexismash.it: its fingerprint must appear in the chain.</p>
+  <label for="rating">Rating (1–5)</label>
+  <input id="rating" type="number" min="1" max="5" value="5">
+  <label for="lang">Language</label>
+  <select id="lang"><option>it</option><option>en</option><option>fr</option><option>de</option><option>es</option><option>nl</option></select>
+  <label for="text">Text (exactly as shown; empty if the review has no text)</label>
+  <textarea id="text" rows="4"></textarea>
+  <button id="check">Compute and look it up</button>
+  <p id="single"></p>
+</div>
+
+<div class="box">
+  <h2 style="margin-top:0">Chain</h2>
+  <div id="table" class="muted">—</div>
+</div>
+
+<p class="muted">Formula: <code>contentHash = sha256(JSON.stringify({rating, text, lang}))</code>, <code>hash = sha256(prevHash|seq|id|createdAt|authorRef|rating|contentHash)</code>. Source and history: <a href="https://github.com/LexiSmash/LexiSmash_reviews">GitHub</a>.</p>
+
+<script>
+(async function () {
+  const enc = new TextEncoder();
+  async function sha256(s) {
+    const buf = await crypto.subtle.digest('SHA-256', enc.encode(String(s)));
+    return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, '0')).join('');
+  }
+  const entryHash = (e) => sha256([e.prevHash, e.seq, e.id, e.createdAt, e.authorRef, e.rating, e.contentHash].join('|'));
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const resultEl = document.getElementById('result');
+  let data;
+  try {
+    data = await fetch('reviews-chain.json', { cache: 'no-store' }).then((r) => r.json());
+  } catch (e) {
+    resultEl.innerHTML = '<span class="bad">Could not load reviews-chain.json.</span>';
+    return;
+  }
+  const chain = Array.isArray(data.chain) ? data.chain : [];
+  let prev = data.genesis || '0'.repeat(64);
+  const problems = [];
+  for (let i = 0; i < chain.length; i++) {
+    const e = chain[i];
+    if (e.seq !== i + 1) problems.push(`seq ${e.seq}: expected ${i + 1}`);
+    if (e.prevHash !== prev) problems.push(`seq ${e.seq}: prevHash does not match the previous entry`);
+    if ((await entryHash(e)) !== e.hash) problems.push(`seq ${e.seq}: hash does not match its content`);
+    prev = e.hash;
+  }
+  if (chain.length && data.head && data.head.hash !== prev) problems.push('head does not match the last entry');
+  resultEl.innerHTML = problems.length
+    ? `<span class="bad">❌ Chain broken</span> (${chain.length} entries)<ul>${problems.map((p) => `<li>${esc(p)}</li>`).join('')}</ul>`
+    : `<span class="ok">✅ Chain intact</span> — ${chain.length} ${chain.length === 1 ? 'entry' : 'entries'}${data.generatedAt ? `, updated ${esc(new Date(data.generatedAt).toLocaleString())}` : ''}.`;
+
+  document.getElementById('table').innerHTML = chain.length
+    ? `<table><tr><th>#</th><th>Date</th><th>★</th><th>Status</th><th>contentHash</th></tr>${chain.slice().reverse().map((e) => `<tr><td>${e.seq}</td><td>${esc(new Date(e.createdAt).toLocaleDateString())}</td><td>${e.rating}</td><td>${esc(e.status)}</td><td><code>${esc(e.contentHash)}</code></td></tr>`).join('')}</table>`
+    : 'No reviews yet.';
+
+  document.getElementById('check').addEventListener('click', async () => {
+    const rating = Number(document.getElementById('rating').value);
+    const text = document.getElementById('text').value.trim();
+    const lang = document.getElementById('lang').value;
+    const h = await sha256(JSON.stringify({ rating, text, lang }));
+    const found = chain.find((e) => e.contentHash === h);
+    document.getElementById('single').innerHTML = found
+      ? `<span class="ok">✅ Found</span>: review #${found.seq} of ${esc(new Date(found.createdAt).toLocaleDateString())}, unchanged since it was written.`
+      : `<span class="bad">Not found.</span> Check that rating, language and text are exactly as shown (spaces and punctuation count). Fingerprint: <code>${h}</code>`;
+  });
+})();
+</script>
+</body>
+</html>

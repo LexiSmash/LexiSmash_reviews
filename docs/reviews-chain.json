@@ -1,0 +1,8 @@
+{
+  "project": "LexiSmash",
+  "generatedAt": null,
+  "formula": "hash = sha256(prevHash|seq|id|createdAt|authorRef|rating|contentHash); contentHash = sha256(JSON.stringify({rating,text,lang}))",
+  "genesis": "0000000000000000000000000000000000000000000000000000000000000000",
+  "head": { "seq": 0, "hash": "0000000000000000000000000000000000000000000000000000000000000000" },
+  "chain": []
+}
